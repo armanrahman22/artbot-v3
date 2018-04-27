@@ -7,7 +7,7 @@ var explore_1 = require("./explore");
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
 require('dotenv').load();
-exports.helpMessage = "You can: \n \n    Start by showing artwork by saying something like 'Show me paintings by Rothko'. \n\n    Get details about the piece you're looking at: 'Tell me more about this painting'. \n\n    Get details about the artist: 'Tell me about Rothko' or \"Who is Rothko\".";
+exports.helpMessage = "You can: \n \n    Start by showing artwork by saying something like 'Show me paintings by Picasso'. \n\n    Get details about the piece you're looking at: 'Tell me more about this painting'. \n\n    Get details about the artist: 'Tell me about Picasso' or \"Who is Picasso\".";
 // getAllPaintingsFromAPI();
 // getAllArtistsFromAPI();
 exports.ALL_PAINTINGS = explore_1.getFamousPaintingsFromFile();
@@ -36,6 +36,8 @@ var inMemoryStorage = new builder.MemoryBotStorage();
 // match any intents handled by other dialogs.
 var bot = new builder.UniversalBot(connector, function (session, args) {
     // If the object for storing notes in session.userData doesn't exist yet, initialize it
+    var userMessage = session.message.text;
+    console.log("you said: " + userMessage);
     if (!session.userData.registered) {
         session.userData.registered = true;
         session.send(exports.helpMessage);
@@ -50,29 +52,50 @@ console.log(LuisModelUrl);
 var recognizer = new builder.LuisRecognizer(LuisModelUrl);
 bot.recognizer(recognizer);
 bot.dialog('Explore_artist', function (session, args) {
+    var userMessage = session.message.text;
+    console.log("you said: " + userMessage);
     var intent = args.intent;
     var artist_entity = builder.EntityRecognizer.findEntity(intent.entities, 'Artist');
-    if (artist_entity.entity != null) {
+    if (artist_entity != null) {
         var bio = explore_1.getArtistInfo(artist_entity.entity);
         session.send(bio);
+    }
+    else {
+        session.send("Didn't recognize: " + userMessage);
+        session.send(exports.helpMessage);
     }
     session.endDialog();
 }).triggerAction({
     matches: 'Explore_artist'
 });
 bot.dialog('Explore_painting', function (session, args) {
-    var description = explore_1.explorePainting();
-    session.send(description);
+    var userMessage = session.message.text;
+    console.log("you said: " + userMessage);
+    var strArray = userMessage.split(" ");
+    if (/^\d+$/.test(strArray[-1])) {
+        var description = explore_1.explorePainting(parseInt(strArray[-1]));
+        session.send(description);
+    }
+    else {
+        session.send("Didn't recognize: " + userMessage);
+        session.send(exports.helpMessage);
+    }
     session.endDialog();
 }).triggerAction({
     matches: 'Explore_painting'
 });
 bot.dialog('Show', function (session, args) {
+    var userMessage = session.message.text;
+    console.log("you said: " + userMessage);
     var intent = args.intent;
     var artist_entity = builder.EntityRecognizer.findEntity(intent.entities, 'Artist');
-    if (artist_entity.entity != null) {
+    if (artist_entity != null) {
         var paintings = explore_1.getPaintings(artist_entity.entity);
         session.send(paintings);
+    }
+    else {
+        session.send("Didn't recognize: " + userMessage);
+        session.send(exports.helpMessage);
     }
     session.endDialog();
 }).triggerAction({

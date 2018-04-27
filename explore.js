@@ -58,7 +58,6 @@ function getBestmatch(value) {
         if (bestMatchValue > .8) {
             return bestMatch;
         }
-        return null;
     }
     return null;
 }
@@ -340,9 +339,7 @@ function getArtistInfo(artist_name) {
     return "No artist found with name: " + artist_name;
 }
 exports.getArtistInfo = getArtistInfo;
-function explorePainting() {
-    // TODO: get real ID 
-    var paintingID = 0;
+function explorePainting(paintingID) {
     for (var _i = 0, ALL_ARTISTS_2 = app_1.ALL_ARTISTS; _i < ALL_ARTISTS_2.length; _i++) {
         var artist = ALL_ARTISTS_2[_i];
         for (var _a = 0, _b = artist.rangePaintings; _a < _b.length; _a++) {

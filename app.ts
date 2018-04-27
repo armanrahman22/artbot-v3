@@ -10,9 +10,9 @@ require('dotenv').load();
 
 export const helpMessage = 
     `You can: \n 
-    Start by showing artwork by saying something like 'Show me paintings by Rothko'. \n
+    Start by showing artwork by saying something like 'Show me paintings by Picasso'. \n
     Get details about the piece you're looking at: 'Tell me more about this painting'. \n
-    Get details about the artist: 'Tell me about Rothko' or "Who is Rothko".`;
+    Get details about the artist: 'Tell me about Picasso' or "Who is Picasso".`;
 
 // getAllPaintingsFromAPI();
 // getAllArtistsFromAPI();
@@ -48,6 +48,8 @@ var inMemoryStorage = new builder.MemoryBotStorage();
 // match any intents handled by other dialogs.
 var bot = new builder.UniversalBot(connector, function (session, args) {
     // If the object for storing notes in session.userData doesn't exist yet, initialize it
+    let userMessage = session.message.text;
+    console.log("you said: " + userMessage);
     if (!session.userData.registered) {
         session.userData.registered = true;
         session.send(helpMessage);
@@ -68,11 +70,16 @@ bot.recognizer(recognizer);
 
 bot.dialog('Explore_artist',
     (session, args) => {
-        var intent = args.intent;
-        var artist_entity = builder.EntityRecognizer.findEntity(intent.entities, 'Artist');
-        if(artist_entity.entity != null ){
+        let userMessage = session.message.text;
+        console.log("you said: " + userMessage);
+        let intent = args.intent;
+        let artist_entity = builder.EntityRecognizer.findEntity(intent.entities, 'Artist');
+        if(artist_entity != null ){
             let bio: string = getArtistInfo(artist_entity.entity);
             session.send(bio);
+        } else {
+            session.send("Didn't recognize: " + userMessage);
+            session.send(helpMessage);
         }
         session.endDialog();
     }
@@ -82,8 +89,16 @@ bot.dialog('Explore_artist',
 
 bot.dialog('Explore_painting',
     (session, args) => {
-        let description: string = explorePainting();
-        session.send(description);
+        let userMessage = session.message.text;
+        console.log("you said: " + userMessage);
+        let strArray = userMessage.split(" ");
+        if(/^\d+$/.test(strArray[-1])){
+            let description: string = explorePainting(parseInt(strArray[-1]));
+            session.send(description);
+        } else {
+            session.send("Didn't recognize: " + userMessage);
+            session.send(helpMessage);
+        }
         session.endDialog();
     }
 ).triggerAction({
@@ -92,11 +107,16 @@ bot.dialog('Explore_painting',
 
 bot.dialog('Show',
     (session, args) => {
-        var intent = args.intent;
-        var artist_entity = builder.EntityRecognizer.findEntity(intent.entities, 'Artist');
-        if(artist_entity.entity != null ){
+        let userMessage = session.message.text;
+        console.log("you said: " + userMessage);
+        let intent = args.intent;
+        let artist_entity = builder.EntityRecognizer.findEntity(intent.entities, 'Artist');
+        if(artist_entity != null ){
             let paintings: string = getPaintings(artist_entity.entity);
             session.send(paintings);
+        } else {
+            session.send("Didn't recognize: " + userMessage);
+            session.send(helpMessage);
         }
         session.endDialog();
     }

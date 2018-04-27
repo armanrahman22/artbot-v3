@@ -62,7 +62,6 @@ export interface Artwork {
     galleryName: string,
     tags: string,
     description: string
-    
 }
 
 
@@ -80,7 +79,6 @@ export function getBestmatch(value: string) : string {
         if(bestMatchValue > .8){
             return bestMatch;
         } 
-        return null;
     } 
     return null;
 }
@@ -282,9 +280,7 @@ export function getArtistInfo(artist_name: string): string{
 }
 
 
-export function explorePainting(): string {
-    // TODO: get real ID 
-    let paintingID = 0;
+export function explorePainting(paintingID: number): string {
     for(let artist of ALL_ARTISTS) {
         for(let painting of artist.rangePaintings){
             if(painting.contentId == paintingID){
