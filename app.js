@@ -8,9 +8,7 @@ require('es6-promise').polyfill();
 require('isomorphic-fetch');
 require('dotenv').load();
 exports.helpMessage = "You can: \n \n    Start by showing artwork by saying something like 'Show me paintings by Picasso'. \n\n    Get details about the piece you're looking at: 'Tell me more about this painting'. \n\n    Get details about the artist: 'Tell me about Picasso' or \"Who is Picasso\".";
-// getAllPaintingsFromAPI();
 // getAllArtistsFromAPI();
-exports.ALL_PAINTINGS = explore_1.getFamousPaintingsFromFile();
 exports.ALL_ARTISTS = explore_1.getAllArtistsFromFile();
 // Setup Restify Server
 var server = restify.createServer();
@@ -47,7 +45,6 @@ var bot = new builder.UniversalBot(connector, function (session, args) {
 var luisAppId = process.env.LuisAppId;
 var luisAPIKey = process.env.LuisAPIKey;
 var LuisModelUrl = 'https://eastus2.api.cognitive.microsoft.com/luis/v2.0/apps/' + luisAppId + '?subscription-key=' + luisAPIKey;
-console.log(LuisModelUrl);
 // Create a recognizer that gets intents from LUIS, and add it to the bot
 var recognizer = new builder.LuisRecognizer(LuisModelUrl);
 bot.recognizer(recognizer);
@@ -100,4 +97,9 @@ bot.dialog('Show', function (session, args) {
     session.endDialog();
 }).triggerAction({
     matches: 'Show'
+});
+bot.dialog('None', function (session, args) {
+    session.send(exports.helpMessage);
+}).triggerAction({
+    matches: 'None'
 });

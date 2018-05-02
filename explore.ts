@@ -1,6 +1,8 @@
-import {ALL_ARTISTS, ALL_PAINTINGS, helpMessage} from './app';
+import {ALL_ARTISTS, helpMessage} from './app';
 const FuzzySet = require('fuzzyset.js');
-var fs = require('fs');
+const fs = require('fs');
+const JSSoup = require('jssoup').default;
+const uuidv1 = require('uuid/v1');
 
 const ARTISTS: string[] = ['Pablo Picasso', 'Vincent van Gogh', 'Leonardo da Vinci', 'Claude Monet', 'Salvador Dali', 'Henri Matisse', 'Rembrandt',
 'Andy Warhol', "Georgia O'Keeffe", 'Michelangelo', 'Peter Paul Rubens', 'Edgar Degas', 'Caravaggio', 'Pierre-Auguste Renoir', 'Raphael', 'Paul Cezanne', 
@@ -33,35 +35,20 @@ export interface Artist {
     rangePaintings: Artwork[]
 }
 
-
 export interface Artwork {
-    title: string,
     artistName: string,
     artistContentId: number,
-    completitionYear: number,
-    yearAsString: string,
-    width: number,
-    height: number,
-    image: string,
-    contentId: number,
-    artistUrl: string,
-    url: string,
-    location: string,
-    period: string,
-    serie: string,
-    genre: string,
-    material: string,
-    style: string,
-    technique: string,
-    sizeX: number,
-    sizeY: number,
-    diameter: number,
-    auction: string,
-    yearOfTrade: number,
-    lastPrice: string,
-    galleryName: string,
-    tags: string,
-    description: string
+    paintingContentId: number,
+    paintingTitle: string,
+    paintingInfo: string,
+    paintingDescription: string,
+    paintingImageUrl: string
+}
+
+export interface ReturnJson {
+    intent: string,
+    textResponse: string,
+    jsonResponse: string
 }
 
 
@@ -89,8 +76,9 @@ export function getAllArtistsFromFile(): Artist[]{
     return json_data;
 }
 
-export function getFamousPaintingsFromFile(): Artwork[]{
-    let json_data: Artwork[] = JSON.parse(fs.readFileSync('FamousPaintings.json', 'utf8'));
+
+export function getFamousPaintingsFromFile(){
+    let json_data = JSON.parse(fs.readFileSync('FamousPaintings.json', 'utf8'));
     return json_data;
 }
 
@@ -110,7 +98,7 @@ export async function getAllArtistsFromAPI(){
     
     let count = 0;
     for(let artist_url of all_urls) {
-        console.log("working on artist number: " + count);
+        console.log(`working on artist ${artist_url} number: ${count}`);
         count ++;
         let url = "http://www.wikiart.org/en/" + artist_url + "?json=2";
         try {
@@ -139,8 +127,11 @@ export async function getAllArtistsFromAPI(){
                 popularPaintings: null,
                 rangePaintings: null
             }
-            artist.rangePaintings = await paintings_by_artist_range(artist.url);
-            artist.popularPaintings = paintings_by_artist_famous(artist.contentId);
+            // artist.rangePaintings = await paintings_by_artist_range(artist.url);
+            artist.popularPaintings = paintings_by_artist_famous(artist.contentId, artist.artistName);
+            if(artist.popularPaintings.length == 0){
+                artist.popularPaintings = await paintings_by_artist_range(artist.url);
+            }
             all_artists.push(artist);
         }
         catch(err){
@@ -157,36 +148,25 @@ export async function getAllArtistsFromAPI(){
     console.log("DONE");
 }
 
-export async function getAllPaintingsFromAPI(){
-    console.log("Getting famous paintings...");
-    let paintingIdsList: number[] = [];
-    let request_uri = `https://www.wikiart.org/en/App/Painting/MostViewedPaintings?randomSeed=123&json=2&inPublicDomain=true`;
-    try{
-        let response = await fetch(request_uri);
-        let data = await response.json();
-        data.forEach(painting_json => {
-            paintingIdsList.push(painting_json.contentId);
-        });
-    }
-    catch(err){
-        console.log(err);
-    }
-    let paintingList: Artwork[] = await fillPaintingsFromIds(paintingIdsList);
-    let jsonData = JSON.stringify(paintingList);
-    fs.writeFile("FamousPaintings.json", jsonData, function(err) {
-        if (err) {
-            console.log(err);
-        }
-    });
-    console.log("DONE");
-}
 
-
-export function paintings_by_artist_famous(artist_id: number): Artwork[]{
+export function paintings_by_artist_famous(artist_id: number, artist_name: string): Artwork[]{
+    let json_data = getFamousPaintingsFromFile();
     let paintingList: Artwork[] = [];
-    for(let painting of ALL_PAINTINGS) {
-        if(painting.artistContentId == artist_id){
-            paintingList.push(painting);
+    for(let artist of json_data.artists) {
+        if(artist.artist_name == artist_name){
+            console.log(artist_name);
+            for(let jsonPainting of artist.paintings) {
+                let painting: Artwork = {
+                    paintingTitle: jsonPainting.painting_title,
+                    artistName: artist_name,
+                    artistContentId: artist_id,
+                    paintingContentId: uuidv1(),
+                    paintingInfo: jsonPainting.painting_info,
+                    paintingImageUrl: jsonPainting.painting_image_url,
+                    paintingDescription: jsonPainting.painting_description
+                };
+                paintingList.push(painting)
+            }
         }
     }
     console.log(`   getting ${paintingList.length} famous paintings`)
@@ -200,13 +180,8 @@ export async function paintings_by_artist_range(artist_url: string): Promise<Art
     try{
         let response = await fetch(request_uri);
         let data = await response.json();
-        let indexer = Math.floor(data.length/10);
-        let i = 0;
-        while (i < data.length){
-            if(data[i]){
-                paintingIdsList.push(data[i].contentId);
-            } 
-            i = i + indexer;
+        for(let artwork of data) {
+            paintingIdsList.push(artwork.contentId);
         }
     }
     catch(err){
@@ -219,61 +194,105 @@ export async function paintings_by_artist_range(artist_url: string): Promise<Art
 
 async function fillPaintingsFromIds(paintingIdsList: number[]): Promise<Artwork[]> {
     let paintingList: Artwork[] = [];
+    let unwantedPaintingList: Artwork[] = [];
     let count = 0;
+    let descriptionCount = 0;
     let length = paintingIdsList.length;
     let mod = Math.floor(length/10);
     for(let id of paintingIdsList) {
-        let request_uri = `http://www.wikiart.org/en/App/Painting/ImageJson/${id}`;
-        if(count%mod == 0 ){
-            console.log(`     Processing artwork number ${count} of ${length}`);
-        }
-        count++;
-        try{
-            let response = await fetch(request_uri);
-            let data = await response.json();
-            let painting: Artwork = {
-                title: data.title,
-                artistName: data.artistName,
-                artistContentId: data.artistContentId,
-                completitionYear: data.completitionYear,
-                yearAsString: data.yearAsString,
-                width: data.width,
-                height: data.height,
-                image: data.image,
-                contentId: data.contentId,
-                artistUrl: data.artistUrl,
-                url: data.url,
-                location: data.location,
-                period: data.period,
-                serie: data.serie,
-                genre: data.genre,
-                material: data.material,
-                style: data.style,
-                technique: data.technique,
-                sizeX: data.sizeX,
-                sizeY: data.sizeY,
-                diameter: data.diameter,
-                auction: data.auction,
-                yearOfTrade: data.yearOfTrade,
-                lastPrice: data.lastPrice,
-                galleryName: data.galleryName,
-                tags: data.tags,
-                description: data.description
+        if(descriptionCount < 10){
+            let request_uri = `http://www.wikiart.org/en/App/Painting/ImageJson/${id}`;
+            if(count%mod == 0 ){
+                console.log(`     Processing artwork number ${count} of ${length}. ` + (10 - descriptionCount) + " descriptions left.");
             }
-            paintingList.push(painting);
+            count++;
+            try{
+                let response = await fetch(request_uri);
+                let data = await response.json();
+                let description = data.description;
+                if(!description){
+                    description = await getWikiInfo(data.artistName, data.title);
+                }
+                if(description){
+                    let painting: Artwork = {
+                        paintingTitle: data.title,
+                        artistName: data.artistName,
+                        artistContentId: data.artistContentId,
+                        paintingContentId: data.contentId,
+                        paintingInfo: data.yearAsString,
+                        paintingImageUrl: data.url,
+                        paintingDescription: description
+                    }
+                    paintingList.push(painting);
+                    descriptionCount++;
+                } else if (count%mod == 0) {
+                    let painting: Artwork = {
+                        paintingTitle: data.title,
+                        artistName: data.artistName,
+                        artistContentId: data.artistContentId,
+                        paintingContentId: data.contentId,
+                        paintingInfo: data.yearAsString,
+                        paintingImageUrl: data.url,
+                        paintingDescription: description
+                    }
+                    unwantedPaintingList.push(painting);
+                }
+            }
+            catch(err){
+                console.log(err);
+            }
         }
-        catch(err){
-            console.log(err);
-        }
+    }
+    if(descriptionCount < 11 ){
+        console.log( "      " + (10 - descriptionCount) + " undescribed paintings found.")
+    }
+    while(descriptionCount < 10){
+        paintingList.push(unwantedPaintingList.pop());
+        descriptionCount++
     }
     return paintingList;
 }
 
 
+export async function getWikiInfo(artist_name: string, painting_name: string): Promise<string> {
+    let url_artist_name: string = artist_name.split(" ")[0];
+    let url_painting_name: string = painting_name.replace(/ /g, "_");
+    let request_uri = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${url_painting_name}+${url_artist_name}`;
+    try{
+        let response = await fetch(request_uri);
+        let data = await response.json();
+        if (data.length && data[3][0]){
+            let wiki_name = data[3][0].split("/").slice(-1)[0];
+            console.log("           got description: " + wiki_name);
+            request_uri = `https://en.wikipedia.org/w/api.php?action=query&titles=${wiki_name}&format=json`;
+            response = await fetch(request_uri);
+            data = await response.json();
+            let pageid = data.query.pages[Object.keys(data.query.pages)[0]].pageid;
+            if(pageid){
+                request_uri = `https://en.wikipedia.org/w/api.php?action=query&format=json&prop=extracts&pageids=${pageid}&exintro=1&explaintext=1`;
+                response = await fetch(request_uri);
+                data = await response.json();
+                let extract = data.query.pages[Object.keys(data.query.pages)[0]].extract;
+                return extract;
+            }
+        }
+    }
+    catch(err){
+        console.log(err);
+    }
+    console.log("           No wiki description found: " + request_uri);
+    return null;
+}
+
 export function getArtistInfo(artist_name: string): string{
     for(let artist of ALL_ARTISTS) {
         if(artist.artistName.search(new RegExp(artist_name, 'i')) != -1) {
-            return artist.biography.replace(/ *\[[^)]*\] */g, "");
+            let json: ReturnJson = {
+                intent: "Explore_artist",
+                textResponse: artist.biography.replace(/ *\[[^)]*\] */g, ""),
+                jsonResponse: null
+            }
+            return JSON.stringify(json);
         }
     }
     return `No artist found with name: ${artist_name}`;
@@ -283,8 +302,13 @@ export function getArtistInfo(artist_name: string): string{
 export function explorePainting(paintingID: number): string {
     for(let artist of ALL_ARTISTS) {
         for(let painting of artist.rangePaintings){
-            if(painting.contentId == paintingID){
-                return painting.description.replace(/ *\[[^)]*\] */g, "");
+            if(painting.paintingContentId == paintingID){
+                let json: ReturnJson = {
+                    intent: "Explore_painting",
+                    textResponse: painting.paintingDescription.replace(/ *\[[^)]*\] */g, ""),
+                    jsonResponse: null
+                }
+                return JSON.stringify(json);
             }
         }
     }
@@ -295,7 +319,13 @@ export function explorePainting(paintingID: number): string {
 export function getPaintings(artist_name: string): string {
     for(let artist of ALL_ARTISTS) {
         if(artist.artistName.search(new RegExp(artist_name, 'i')) != -1) {
-            return JSON.stringify(artist.rangePaintings);
+            let json: ReturnJson = {
+                intent: "Show",
+                textResponse: null,
+                jsonResponse: JSON.stringify(artist.popularPaintings)
+            }
+            return JSON.stringify(json);
+            
         }
     }
     return `No paintings by ${artist_name} found!`;

@@ -1,8 +1,8 @@
 var restify = require('restify');
 var builder = require('botbuilder');
 var botbuilder_azure = require("botbuilder-azure");
-import {getArtistInfo, Artist, getAllArtistsFromFile, getAllArtistsFromAPI, Artwork, 
-    getAllPaintingsFromAPI, getFamousPaintingsFromFile, getPaintings, explorePainting} from './explore';
+import {getArtistInfo, Artist, getAllArtistsFromFile, getAllArtistsFromAPI, Artwork,
+        getFamousPaintingsFromFile, getPaintings, explorePainting, getWikiInfo} from './explore';
 
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
@@ -14,9 +14,7 @@ export const helpMessage =
     Get details about the piece you're looking at: 'Tell me more about this painting'. \n
     Get details about the artist: 'Tell me about Picasso' or "Who is Picasso".`;
 
-// getAllPaintingsFromAPI();
 // getAllArtistsFromAPI();
-export const ALL_PAINTINGS: Artwork[] = getFamousPaintingsFromFile();
 export const ALL_ARTISTS: Artist[] = getAllArtistsFromFile();
 
 // Setup Restify Server
@@ -63,7 +61,6 @@ var luisAPIKey = process.env.LuisAPIKey;
 
 const LuisModelUrl = 'https://eastus2.api.cognitive.microsoft.com/luis/v2.0/apps/' + luisAppId + '?subscription-key=' + luisAPIKey;
 
-console.log(LuisModelUrl);
 // Create a recognizer that gets intents from LUIS, and add it to the bot
 var recognizer = new builder.LuisRecognizer(LuisModelUrl);
 bot.recognizer(recognizer);
@@ -122,4 +119,12 @@ bot.dialog('Show',
     }
 ).triggerAction({
     matches: 'Show'
+});
+
+bot.dialog('None',
+    (session, args) => {
+        session.send(helpMessage);
+    }
+).triggerAction({
+    matches: 'None'
 });
