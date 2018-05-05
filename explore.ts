@@ -48,7 +48,7 @@ export interface Artwork {
 export interface ReturnJson {
     intent: string,
     textResponse: string,
-    jsonResponse: string
+    jsonResponse: Artwork[]
 }
 
 
@@ -152,6 +152,7 @@ export async function getAllArtistsFromAPI(){
 export function paintings_by_artist_famous(artist_id: number, artist_name: string): Artwork[]{
     let json_data = getFamousPaintingsFromFile();
     let paintingList: Artwork[] = [];
+    let paintingIdCounter: number = artist_id * 10;
     for(let artist of json_data.artists) {
         if(artist.artist_name == artist_name){
             console.log(artist_name);
@@ -160,12 +161,13 @@ export function paintings_by_artist_famous(artist_id: number, artist_name: strin
                     paintingTitle: jsonPainting.painting_title,
                     artistName: artist_name,
                     artistContentId: artist_id,
-                    paintingContentId: uuidv1(),
+                    paintingContentId: paintingIdCounter,
                     paintingInfo: jsonPainting.painting_info,
                     paintingImageUrl: jsonPainting.painting_image_url,
                     paintingDescription: jsonPainting.painting_description
                 };
                 paintingList.push(painting)
+                paintingIdCounter++;
             }
         }
     }
@@ -295,13 +297,18 @@ export function getArtistInfo(artist_name: string): string{
             return JSON.stringify(json);
         }
     }
-    return `No artist found with name: ${artist_name}`;
+    let json: ReturnJson = {
+        intent: "Explore_artist",
+        textResponse: `No artist found with name: ${artist_name}`,
+        jsonResponse: null
+    }
+    return  JSON.stringify(json);
 }
 
 
 export function explorePainting(paintingID: number): string {
     for(let artist of ALL_ARTISTS) {
-        for(let painting of artist.rangePaintings){
+        for(let painting of artist.popularPaintings){
             if(painting.paintingContentId == paintingID){
                 let json: ReturnJson = {
                     intent: "Explore_painting",
@@ -312,7 +319,12 @@ export function explorePainting(paintingID: number): string {
             }
         }
     }
-    return `No descrtiption for that painting found!`;
+    let json: ReturnJson = {
+        intent: "Explore_artist",
+        textResponse: `No descrtiption for that painting found!`,
+        jsonResponse: null
+    }
+    return  JSON.stringify(json);
 }
 
 
@@ -322,11 +334,16 @@ export function getPaintings(artist_name: string): string {
             let json: ReturnJson = {
                 intent: "Show",
                 textResponse: null,
-                jsonResponse: JSON.stringify(artist.popularPaintings)
+                jsonResponse: artist.popularPaintings
             }
             return JSON.stringify(json);
             
         }
     }
-    return `No paintings by ${artist_name} found!`;
+    let json: ReturnJson = {
+        intent: "Explore_artist",
+        textResponse: `No paintings by ${artist_name} found!`,
+        jsonResponse: null
+    }
+    return  JSON.stringify(json);
 }

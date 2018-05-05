@@ -2,7 +2,7 @@ var restify = require('restify');
 var builder = require('botbuilder');
 var botbuilder_azure = require("botbuilder-azure");
 import {getArtistInfo, Artist, getAllArtistsFromFile, getAllArtistsFromAPI, Artwork,
-        getFamousPaintingsFromFile, getPaintings, explorePainting, getWikiInfo} from './explore';
+        getFamousPaintingsFromFile, getPaintings, explorePainting, getWikiInfo, ReturnJson} from './explore';
 
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
@@ -75,8 +75,13 @@ bot.dialog('Explore_artist',
             let bio: string = getArtistInfo(artist_entity.entity);
             session.send(bio);
         } else {
-            session.send("Didn't recognize: " + userMessage);
-            session.send(helpMessage);
+            let returnString = "Didn't recognize: " + userMessage + "\n" + helpMessage
+            let json: ReturnJson = {
+                intent: "None",
+                textResponse: returnString,
+                jsonResponse: null
+            }
+            session.send(JSON.stringify(json));
         }
         session.endDialog();
     }
@@ -89,12 +94,18 @@ bot.dialog('Explore_painting',
         let userMessage = session.message.text;
         console.log("you said: " + userMessage);
         let strArray = userMessage.split(" ");
-        if(/^\d+$/.test(strArray[-1])){
-            let description: string = explorePainting(parseInt(strArray[-1]));
+        if(/^\d+$/.test(strArray[strArray.length-1])){
+            console.log(parseInt(strArray[strArray.length-1]));
+            let description: string = explorePainting(parseInt(strArray[strArray.length-1]));
             session.send(description);
         } else {
-            session.send("Didn't recognize: " + userMessage);
-            session.send(helpMessage);
+            let returnString = "Didn't recognize: " + userMessage + "\n" + helpMessage
+            let json: ReturnJson = {
+                intent: "None",
+                textResponse: returnString,
+                jsonResponse: null
+            }
+            session.send(JSON.stringify(json));
         }
         session.endDialog();
     }
@@ -112,8 +123,13 @@ bot.dialog('Show',
             let paintings: string = getPaintings(artist_entity.entity);
             session.send(paintings);
         } else {
-            session.send("Didn't recognize: " + userMessage);
-            session.send(helpMessage);
+            let returnString = "Didn't recognize: " + userMessage + "\n" + helpMessage
+            let json: ReturnJson = {
+                intent: "None",
+                textResponse: returnString,
+                jsonResponse: null
+            }
+            session.send(JSON.stringify(json));
         }
         session.endDialog();
     }
@@ -123,7 +139,14 @@ bot.dialog('Show',
 
 bot.dialog('None',
     (session, args) => {
-        session.send(helpMessage);
+        let returnString = helpMessage
+        let json: ReturnJson = {
+            intent: "None",
+            textResponse: returnString,
+            jsonResponse: null
+        }
+        session.send(JSON.stringify(json));
+        session.endDialog();
     }
 ).triggerAction({
     matches: 'None'

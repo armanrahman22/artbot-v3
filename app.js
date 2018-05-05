@@ -58,8 +58,13 @@ bot.dialog('Explore_artist', function (session, args) {
         session.send(bio);
     }
     else {
-        session.send("Didn't recognize: " + userMessage);
-        session.send(exports.helpMessage);
+        var returnString = "Didn't recognize: " + userMessage + "\n" + exports.helpMessage;
+        var json = {
+            intent: "None",
+            textResponse: returnString,
+            jsonResponse: null
+        };
+        session.send(JSON.stringify(json));
     }
     session.endDialog();
 }).triggerAction({
@@ -69,13 +74,19 @@ bot.dialog('Explore_painting', function (session, args) {
     var userMessage = session.message.text;
     console.log("you said: " + userMessage);
     var strArray = userMessage.split(" ");
-    if (/^\d+$/.test(strArray[-1])) {
-        var description = explore_1.explorePainting(parseInt(strArray[-1]));
+    if (/^\d+$/.test(strArray[strArray.length - 1])) {
+        console.log(parseInt(strArray[strArray.length - 1]));
+        var description = explore_1.explorePainting(parseInt(strArray[strArray.length - 1]));
         session.send(description);
     }
     else {
-        session.send("Didn't recognize: " + userMessage);
-        session.send(exports.helpMessage);
+        var returnString = "Didn't recognize: " + userMessage + "\n" + exports.helpMessage;
+        var json = {
+            intent: "None",
+            textResponse: returnString,
+            jsonResponse: null
+        };
+        session.send(JSON.stringify(json));
     }
     session.endDialog();
 }).triggerAction({
@@ -91,15 +102,27 @@ bot.dialog('Show', function (session, args) {
         session.send(paintings);
     }
     else {
-        session.send("Didn't recognize: " + userMessage);
-        session.send(exports.helpMessage);
+        var returnString = "Didn't recognize: " + userMessage + "\n" + exports.helpMessage;
+        var json = {
+            intent: "None",
+            textResponse: returnString,
+            jsonResponse: null
+        };
+        session.send(JSON.stringify(json));
     }
     session.endDialog();
 }).triggerAction({
     matches: 'Show'
 });
 bot.dialog('None', function (session, args) {
-    session.send(exports.helpMessage);
+    var returnString = exports.helpMessage;
+    var json = {
+        intent: "None",
+        textResponse: returnString,
+        jsonResponse: null
+    };
+    session.send(JSON.stringify(json));
+    session.endDialog();
 }).triggerAction({
     matches: 'None'
 });

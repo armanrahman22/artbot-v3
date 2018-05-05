@@ -171,6 +171,7 @@ exports.getAllArtistsFromAPI = getAllArtistsFromAPI;
 function paintings_by_artist_famous(artist_id, artist_name) {
     var json_data = getFamousPaintingsFromFile();
     var paintingList = [];
+    var paintingIdCounter = artist_id * 10;
     for (var _i = 0, _a = json_data.artists; _i < _a.length; _i++) {
         var artist = _a[_i];
         if (artist.artist_name == artist_name) {
@@ -181,12 +182,13 @@ function paintings_by_artist_famous(artist_id, artist_name) {
                     paintingTitle: jsonPainting.painting_title,
                     artistName: artist_name,
                     artistContentId: artist_id,
-                    paintingContentId: uuidv1(),
+                    paintingContentId: paintingIdCounter,
                     paintingInfo: jsonPainting.painting_info,
                     paintingImageUrl: jsonPainting.painting_image_url,
                     paintingDescription: jsonPainting.painting_description
                 };
                 paintingList.push(painting);
+                paintingIdCounter++;
             }
         }
     }
@@ -372,47 +374,62 @@ function getArtistInfo(artist_name) {
     for (var _i = 0, ALL_ARTISTS_1 = app_1.ALL_ARTISTS; _i < ALL_ARTISTS_1.length; _i++) {
         var artist = ALL_ARTISTS_1[_i];
         if (artist.artistName.search(new RegExp(artist_name, 'i')) != -1) {
-            var json = {
+            var json_1 = {
                 intent: "Explore_artist",
                 textResponse: artist.biography.replace(/ *\[[^)]*\] */g, ""),
                 jsonResponse: null
             };
-            return JSON.stringify(json);
+            return JSON.stringify(json_1);
         }
     }
-    return "No artist found with name: " + artist_name;
+    var json = {
+        intent: "Explore_artist",
+        textResponse: "No artist found with name: " + artist_name,
+        jsonResponse: null
+    };
+    return JSON.stringify(json);
 }
 exports.getArtistInfo = getArtistInfo;
 function explorePainting(paintingID) {
     for (var _i = 0, ALL_ARTISTS_2 = app_1.ALL_ARTISTS; _i < ALL_ARTISTS_2.length; _i++) {
         var artist = ALL_ARTISTS_2[_i];
-        for (var _a = 0, _b = artist.rangePaintings; _a < _b.length; _a++) {
+        for (var _a = 0, _b = artist.popularPaintings; _a < _b.length; _a++) {
             var painting = _b[_a];
             if (painting.paintingContentId == paintingID) {
-                var json = {
+                var json_2 = {
                     intent: "Explore_painting",
                     textResponse: painting.paintingDescription.replace(/ *\[[^)]*\] */g, ""),
                     jsonResponse: null
                 };
-                return JSON.stringify(json);
+                return JSON.stringify(json_2);
             }
         }
     }
-    return "No descrtiption for that painting found!";
+    var json = {
+        intent: "Explore_artist",
+        textResponse: "No descrtiption for that painting found!",
+        jsonResponse: null
+    };
+    return JSON.stringify(json);
 }
 exports.explorePainting = explorePainting;
 function getPaintings(artist_name) {
     for (var _i = 0, ALL_ARTISTS_3 = app_1.ALL_ARTISTS; _i < ALL_ARTISTS_3.length; _i++) {
         var artist = ALL_ARTISTS_3[_i];
         if (artist.artistName.search(new RegExp(artist_name, 'i')) != -1) {
-            var json = {
+            var json_3 = {
                 intent: "Show",
                 textResponse: null,
-                jsonResponse: JSON.stringify(artist.popularPaintings)
+                jsonResponse: artist.popularPaintings
             };
-            return JSON.stringify(json);
+            return JSON.stringify(json_3);
         }
     }
-    return "No paintings by " + artist_name + " found!";
+    var json = {
+        intent: "Explore_artist",
+        textResponse: "No paintings by " + artist_name + " found!",
+        jsonResponse: null
+    };
+    return JSON.stringify(json);
 }
 exports.getPaintings = getPaintings;
